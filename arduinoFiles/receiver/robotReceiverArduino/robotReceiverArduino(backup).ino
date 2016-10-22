@@ -17,14 +17,14 @@
 
 #include <ros.h>
 #include <std_msgs/Int16.h>
-#include <std_msgs/Bool.h>
 #include <std_msgs/String.h>
 #include <rosserial_arduino/servo_control.h>
-//#include <rosserial_arduino/led_control.h>
-#include <my_server/robot_control.h>
+#include <rosserial_arduino/led_control.h>
+#include <rosserial_arduino/constant.h>
+
 #include "motor.h"
 
-#define FULLTOUR 1200
+#define FULLTOUR 1325
 
 //neopixel
 #define PIN 26
@@ -44,7 +44,7 @@ Servo servoHor, servoVer;
 class NewHardware : public ArduinoHardware
 {
 public:
-	NewHardware() : ArduinoHardware(&Serial3, 57600) {};
+	NewHardware() : ArduinoHardware(&Serial1, 57600) {};
 };
 
 ros::NodeHandle_<NewHardware>  nh;
@@ -53,15 +53,14 @@ double measureTemp(int pin, int numSamples = 3);
 double measureVoltage(int pin, int numSamples = 3);
 
 int blueVal = 0, redVal = 0, greenVal = 0;
-int MAXSPEED = 170;
+int MAXHIZ = 170;
 
-motor solMotor(3, 5, 4);
-motor sagMotor(9, 8, 7);
+motor solMotor(3, 4, 5);
+motor sagMotor(9, 7, 8);
 
 #define STDNBY 6
 #define LEDPIN 26
 #define ONBOARD_LED 13
-#define PW_LED 12
 
 #define DEF_SERVO_HOR 90
 #define DEF_SERVO_VER 65
@@ -90,17 +89,11 @@ ros::Publisher pub_debug("debug", &str_msgDebug);
 ros::Publisher pub_servo_feedBack("servo_feedBack", &servo_msg);
 
 
-void controlMotors(const my_server::robot_control& cmd_msg) {
-	int hiz = cmd_msg.speed;
+void controlMotors(const std_msgs::Int16& cmd_msg) {
+	int hiz = cmd_msg.data;
 
-	if(cmd_msg.maxSpeed != MAXSPEED)
-	{
-		changeMAXSpeed(cmd_msg.maxSpeed);
-		return;
-	}
-
-	if (hiz > MAXSPEED) hiz = MAXSPEED;
-	if (hiz < -MAXSPEED) hiz = -MAXSPEED;
+	if (hiz > MAXHIZ) hiz = MAXHIZ;
+	if (hiz < -MAXHIZ) hiz = -MAXHIZ;
 
 	//autoControl for opencv
 	if (!manuelControl)
@@ -112,12 +105,12 @@ void controlMotors(const my_server::robot_control& cmd_msg) {
 
 		if (hiz > 0)
 		{
-			sagMotor.hizAyarla(MAXSPEED - hiz);
-			solMotor.hizAyarla(MAXSPEED);
+			sagMotor.hizAyarla(MAXHIZ - hiz);
+			solMotor.hizAyarla(MAXHIZ);
 		}
 		else {
-			solMotor.hizAyarla(MAXSPEED + hiz);
-			sagMotor.hizAyarla(MAXSPEED);
+			solMotor.hizAyarla(MAXHIZ + hiz);
+			sagMotor.hizAyarla(MAXHIZ);
 		}
 	}
 	else {
@@ -142,25 +135,13 @@ void servoControl(const rosserial_arduino::servo_control& cmd_msg)
 	}
 }
 
-void frontLedControl(const std_msgs::Bool &cmd)
-{
-	digitalWrite(PW_LED, cmd.data);
-}
-
-ros::Subscriber<my_server::robot_control> sub("robotControl", controlMotors);
+ros::Subscriber<std_msgs::Int16> sub("robotControl", controlMotors);
 ros::Subscriber<rosserial_arduino::servo_control> subServo("servoControl", servoControl);
-ros::Subscriber<std_msgs::Bool> frontLedControlSub("frontLedControl", frontLedControl);
-
-void changeMAXSpeed(int newVal)
-{
-	MAXSPEED = newVal;
-	EEPROM.write(0, MAXSPEED);
-}
 
 void dataRead(HardwareSerial *ser)
 {
 	char c = ser->read();
-	int val1, val2, newMAXSPEED;
+	int val1, val2, newMaxHiz;
 	int valX, valY;
 
 
@@ -176,12 +157,14 @@ void dataRead(HardwareSerial *ser)
 		valX = ser->parseInt();
 		valY = ser->parseInt();
 		statServo = ser->parseInt();
-		newMAXSPEED = ser->parseInt();
+		newMaxHiz = ser->parseInt();
 
-		if (newMAXSPEED != MAXSPEED)
+		if (newMaxHiz != MAXHIZ)
 		{
-			changeMAXSpeed(newMAXSPEED);
+			MAXHIZ = newMaxHiz;
+			EEPROM.write(0, MAXHIZ);
 		}
+
 
 		hizAyarla(val1 - 512, val2 - 512);
 		//servo switch i aktif de�ilken kumanda kontrol� aktif
@@ -200,8 +183,6 @@ void dataRead(HardwareSerial *ser)
 		val1 = ser->parseInt();
 
 		manuelControl = false;
-		digitalWrite(ONBOARD_LED, HIGH);
-
 		if (!manuelControl)
 		{
 			sagMotor.dur();
@@ -227,7 +208,6 @@ void setup() {
 	servoVer.write(DEF_SERVO_VER);
 
 	Serial.begin(9600);
-	//Serial2.begin(9600);
 	Serial2.begin(9600);
 
 	pinMode(STDNBY, OUTPUT);
@@ -239,15 +219,14 @@ void setup() {
 	attachInterrupt(4, leftMotorEncoderInt, FALLING);		//sol motor
 	attachInterrupt(5, rightMotorEncoderInt, FALLING);		//sag motor
 
-	//EEPROM 0 MAXSPEED adresi
-	MAXSPEED = EEPROM.read(0);
+	//EEPROM 0 MAXHIZ adresi
+	MAXHIZ = EEPROM.read(0);
 
 	nh.initNode();
 
 	//subsriber ayarlar�
 	nh.subscribe(sub);
 	nh.subscribe(subServo);
-	nh.subscribe(frontLedControlSub);
 
 	//publisher ayarlar�
 	nh.advertise(pub_temp);
@@ -259,9 +238,7 @@ void setup() {
 	sagMotor.dur();
 	solMotor.dur();
 
-
 	pinMode(ONBOARD_LED, OUTPUT);
-	pinMode(PW_LED, OUTPUT);
 }
 
 void leftMotorEncoderInt()
@@ -353,14 +330,14 @@ void loop()
 
 void hizAyarla(int val1, int val2)
 {
-	val1 = map(val1, -512, 512, -MAXSPEED, MAXSPEED);
-	val2 = map(val2, 512, -512, -MAXSPEED, MAXSPEED);
+	val1 = map(val1, -512, 512, -MAXHIZ, MAXHIZ);
+	val2 = map(val2, 512, -512, -MAXHIZ, MAXHIZ);
 
-	if (val1 > MAXSPEED) val1 = MAXSPEED;
-	if (val1 < -MAXSPEED) val1 = -MAXSPEED;
+	if (val1 > MAXHIZ) val1 = MAXHIZ;
+	if (val1 < -MAXHIZ) val1 = -MAXHIZ;
 
-	if (val2 > MAXSPEED) val2 = MAXSPEED;
-	if (val2 < -MAXSPEED) val2 = -MAXSPEED;
+	if (val2 > MAXHIZ) val2 = MAXHIZ;
+	if (val2 < -MAXHIZ) val2 = -MAXHIZ;
 
 	//h�z de�eri 70 den b�y�kken hareket ettir
 	if (val2 < 70 && val2 > -70)
@@ -378,10 +355,8 @@ void hizAyarla(int val1, int val2)
 	if (val1 < 10 && val1 > -10) val1 = 0;
 
 
-	if (val2 < 0)
+	if (val2 >= 0)
 	{
-		val2 = -val2;
-
 		if (val1 > 0)
 		{
 			sagMotor.duzAyarla();
@@ -401,6 +376,7 @@ void hizAyarla(int val1, int val2)
 		}
 	}
 	else {
+		val2 = -val2;
 
 		if (val1 > 0)
 		{
