@@ -1,7 +1,7 @@
-/*
- Name:		robotReceiverArduino.ino
- Created:	9/3/2016 9:40:50 PM
- Author:	baser
+﻿/*
+Name:		robotReceiverArduino.ino
+Created:	9/3/2016 9:40:50 PM
+Author:	baser
 */
 
 #if (ARDUINO >= 100)
@@ -10,25 +10,7 @@
 //#include <WProgram.h>
 #endif
 
-#include <Adafruit_NeoPixel.h>
-#include <EEPROM.h>
-#include <HardwareSerial.h>
-#include <Servo.h>
-
-#include <ros.h>
-#include <std_msgs/Int16.h>
-#include <std_msgs/Bool.h>
-#include <std_msgs/String.h>
-#include <rosserial_arduino/servo_control.h>
-//#include <rosserial_arduino/led_control.h>
-#include <my_server/robot_control.h>
-#include "motor.h"
-
-#define FULLTOUR 1200
-
-//neopixel
-#define PIN 26
-#define NUMPIXELS      16
+#include "configuration.h"
 
 // Parameter 1 = number of pixels in strip
 // Parameter 2 = Arduino pin number (most are valid)
@@ -37,9 +19,9 @@
 //   NEO_KHZ400  400 KHz (classic 'v1' (not v2) FLORA pixels, WS2811 drivers)
 //   NEO_GRB     Pixels are wired for GRB bitstream (most NeoPixel products)
 //   NEO_RGB     Pixels are wired for RGB bitstream (v1 FLORA pixels, not v2)
-Adafruit_NeoPixel pixels = Adafruit_NeoPixel(16, PIN, NEO_GRB + NEO_KHZ800);
+//Adafruit_NeoPixel pixels = Adafruit_NeoPixel(16, PIN, NEO_GRB + NEO_KHZ800);
 
-Servo servoHor, servoVer;
+//Servo servoHor, servoVer;
 
 class NewHardware : public ArduinoHardware
 {
@@ -53,24 +35,12 @@ double measureTemp(int pin, int numSamples = 3);
 double measureVoltage(int pin, int numSamples = 3);
 
 int blueVal = 0, redVal = 0, greenVal = 0;
-int MAXSPEED = 170;
+int MAXSPEED = 120;
 
 motor solMotor(3, 5, 4);
 motor sagMotor(9, 8, 7);
 
-#define STDNBY 6
-#define LEDPIN 26
-#define ONBOARD_LED 13
-#define PW_LED 12
-
-#define DEF_SERVO_HOR 90
-#define DEF_SERVO_VER 65
-
 unsigned long lastTime = 0, lastTime2 = 0, lastTimeEncoder = 0;
-
-#define blinkLed1 27
-#define blinkLed2 29
-#define blinkTimes 3
 
 bool blinkStatusLed1 = false;
 bool blinkStatusLed2 = true;
@@ -89,15 +59,15 @@ ros::Publisher pub_temp("sensors", &str_msg);
 ros::Publisher pub_debug("debug", &str_msgDebug);
 ros::Publisher pub_servo_feedBack("servo_feedBack", &servo_msg);
 
+void controlMotors(int hiz) {
+	//int hiz = cmd_msg.speed;
 
-void controlMotors(const my_server::robot_control& cmd_msg) {
-	int hiz = cmd_msg.speed;
-
-	if(cmd_msg.maxSpeed != MAXSPEED)
+	/*
+	if (cmd_msg.maxSpeed != MAXSPEED)
 	{
-		changeMAXSpeed(cmd_msg.maxSpeed);
-		return;
-	}
+	changeMAXSpeed(cmd_msg.maxSpeed);
+	return;
+	}*/
 
 	if (hiz > MAXSPEED) hiz = MAXSPEED;
 	if (hiz < -MAXSPEED) hiz = -MAXSPEED;
@@ -110,13 +80,13 @@ void controlMotors(const my_server::robot_control& cmd_msg) {
 		sagMotor.duzAyarla();
 		solMotor.duzAyarla();
 
-		if (hiz > 0)
+		if (hiz < 0)
 		{
-			sagMotor.hizAyarla(MAXSPEED - hiz);
+			sagMotor.hizAyarla(MAXSPEED + hiz);
 			solMotor.hizAyarla(MAXSPEED);
 		}
 		else {
-			solMotor.hizAyarla(MAXSPEED + hiz);
+			solMotor.hizAyarla(MAXSPEED - hiz);
 			sagMotor.hizAyarla(MAXSPEED);
 		}
 	}
@@ -127,47 +97,93 @@ void controlMotors(const my_server::robot_control& cmd_msg) {
 	//1 sn boyunca data okunmam��sa motoru durdur
 	lastTime = millis();
 }
-//int valX = 0, valY = 0;
 
+/*
 void servoControl(const rosserial_arduino::servo_control& cmd_msg)
 {
-	//servo switch i aktifken web kontrol� aktif
-	if (statServo)
-	{
-		servo_msg = cmd_msg;
+//servo switch i aktifken web kontrol� aktif
+if (statServo)
+{
+servo_msg = cmd_msg;
 
-		servoHor.write(servo_msg.angle_x);
-		servoVer.write(servo_msg.angle_y);
-		delay(15);
+//servoHor.write(servo_msg.angle_x);
+//servoVer.write(servo_msg.angle_y);
+//delay(15);
+
+servos[0].setTargetPosition(servo_msg.angle_x);
+servos[1].setTargetPosition(servo_msg.angle_y);
+}
+}*/
+
+/*
+void frontLedControl(const std_msgs::Bool &cmd)
+{
+digitalWrite(PW_LED, cmd.data);
+}*/
+
+void commandSubscriber(const rosserial_arduino::command &msg)
+{
+	if (msg.id == "kp")
+	{
+
+	}
+	else if (msg.id == "kd")
+	{
+
+	}
+	else if (msg.id == "ki")
+	{
+
+	}
+	else if (msg.id == "speed")
+	{
+		controlMotors(msg.val);
+	}
+	else if (msg.id == "max_speed")
+	{
+		changeMAXSpeed(msg.val);
+	}
+#ifdef USE_SERVOS
+	else if (msg.id == "servo_x")
+	{
+		servos[0].setTargetPosition(msg.val);
+	}
+	else if (msg.id == "servo_y")
+	{
+		servos[1].setTargetPosition(msg.val);
+	}
+#endif
+	else if (msg.id == "front_led")
+	{
+		digitalWrite(PW_LED, msg.val);
 	}
 }
 
-void frontLedControl(const std_msgs::Bool &cmd)
-{
-	digitalWrite(PW_LED, cmd.data);
-}
-
-ros::Subscriber<my_server::robot_control> sub("robotControl", controlMotors);
-ros::Subscriber<rosserial_arduino::servo_control> subServo("servoControl", servoControl);
-ros::Subscriber<std_msgs::Bool> frontLedControlSub("frontLedControl", frontLedControl);
+ros::Subscriber<rosserial_arduino::command> commandSub("commandSub", commandSubscriber);
+//ros::Subscriber<my_server::robot_control> sub("robotControl", controlMotors);
+//ros::Subscriber<rosserial_arduino::servo_control> subServo("servoControl", servoControl);
+//ros::Subscriber<std_msgs::Bool> frontLedControlSub("frontLedControl", frontLedControl);
 
 void changeMAXSpeed(int newVal)
 {
-	MAXSPEED = newVal;
-	EEPROM.write(0, MAXSPEED);
+	if (newVal != MAXSPEED)
+	{
+		MAXSPEED = newVal;
+		EEPROM.write(0, MAXSPEED);
+	}
 }
 
+//rf alıcı
 void dataRead(HardwareSerial *ser)
 {
 	char c = ser->read();
 	int val1, val2, newMAXSPEED;
 	int valX, valY;
 
-
 	switch (c)
 	{
 
-	//ilk karakter okunmu�sa parse ba�la
+		//ilk karakter okunmu�sa parse ba�la
 	case '#':
 		manuelControl = true;
 
@@ -190,10 +206,13 @@ void dataRead(HardwareSerial *ser)
 			servo_msg.angle_x = valX;
 			servo_msg.angle_y = valY;
 
-			servoHor.write(servo_msg.angle_x);
-			servoVer.write(servo_msg.angle_y);
+			//servoHor.write(servo_msg.angle_x);
+			//servoVer.write(servo_msg.angle_y);
+			//delay(15);
+
+			servos[0].setTargetPosition(servo_msg.angle_x);
+			servos[1].setTargetPosition(servo_msg.angle_y);
 			digitalWrite(ONBOARD_LED, LOW);
-			delay(15);
 		}
 		break;
 	case '&':
@@ -218,13 +237,16 @@ void setup() {
 	// put your setup code here, to run once:
 	//ros 57600 baud rate ile ba�lar tekrar ekleme!!!
 
-
 	//servo ba�lant�lar�
-	servoHor.attach(10);    //yatay servo (x)
-	servoVer.attach(11);    //dikey servo (y)
+	/*
+	servoHor.attach(SERVO_HOR_PIN);    //yatay servo (x)
+	servoVer.attach(SERVO_VER_PIN);    //dikey servo (y)
 
 	servoHor.write(DEF_SERVO_HOR);
-	servoVer.write(DEF_SERVO_VER);
+	servoVer.write(DEF_SERVO_VER);*/
+
+	servos[0].initServo(SERVO_HOR_PIN, 15, DEF_SERVO_HOR);
+	servos[1].initServo(SERVO_VER_PIN, 15, DEF_SERVO_VER);
 
 	Serial.begin(9600);
 	//Serial2.begin(9600);
@@ -234,10 +256,10 @@ void setup() {
 	pinMode(LEDPIN, OUTPUT);
 	pinMode(blinkLed1, OUTPUT);
 	pinMode(blinkLed2, OUTPUT);
-	pixels.begin();
+	//pixels.begin();
 
-	attachInterrupt(4, leftMotorEncoderInt, FALLING);		//sol motor
-	attachInterrupt(5, rightMotorEncoderInt, FALLING);		//sag motor
+	attachInterrupt(digitalPinToInterrupt(ENCODERLEFT_PIN), leftMotorEncoderInt, FALLING);		//sol motor - 4
+	attachInterrupt(digitalPinToInterrupt(ENCODERRIGHT_PIN), rightMotorEncoderInt, FALLING);		//sag motor - 5
 
 	//EEPROM 0 MAXSPEED adresi
 	MAXSPEED = EEPROM.read(0);
@@ -245,9 +267,10 @@ void setup() {
 	nh.initNode();
 
 	//subsriber ayarlar�
-	nh.subscribe(sub);
-	nh.subscribe(subServo);
-	nh.subscribe(frontLedControlSub);
+	//nh.subscribe(sub);
+	//nh.subscribe(subServo);
+	//nh.subscribe(frontLedControlSub);
+	nh.subscribe(commandSub);
 
 	//publisher ayarlar�
 	nh.advertise(pub_temp);
@@ -320,15 +343,18 @@ void loop()
 		if (ledStatus)
 		{
 			//Serial.println("Manuel Control");
-			animateLed(2);
+			//animateLed(2);
 			ledStatus = false;
-			animateLed(1);
+			//animateLed(1);
 		}
 	}
 	else {
 		//autoControl = true;
-		servoHor.write(DEF_SERVO_HOR);
-		servoVer.write(DEF_SERVO_VER);
+		//servoHor.write(DEF_SERVO_HOR);
+		//servoVer.write(DEF_SERVO_VER);
+
+		servos[0].setTargetPosition(DEF_SERVO_HOR);
+		servos[1].setTargetPosition(DEF_SERVO_VER);
 		digitalWrite(LEDPIN, HIGH);
 	}
 
@@ -341,11 +367,14 @@ void loop()
 		solMotor.dur();
 	}
 
-	if(sagMotorEncoder >= FULLTOUR)
+	if (sagMotorEncoder >= FULLTOUR)
 		sagMotorEncoder = 0;
 
-	if(solMotorEncoder >= FULLTOUR)
+	if (solMotorEncoder >= FULLTOUR)
 		solMotorEncoder = 0;
+
+	servos[0].doSweep();
+	servos[1].doSweep();
 
 	nh.spinOnce();
 	delay(1);
@@ -423,28 +452,29 @@ void hizAyarla(int val1, int val2)
 }
 
 //geli�tirlecek
+/*
 void animateLed(int kindOf)
 {
-	switch (kindOf)
-	{
-	case 1:
-		for (int i = 0; i < NUMPIXELS; i++) {
-			pixels.setPixelColor(i, pixels.Color(255, 255, 255));
-			pixels.setBrightness(50);
-			pixels.show();
-			//delay(500);
-		}
-		break;
-	case 2:
-		for (int i = 0; i < NUMPIXELS; i++) {
-			pixels.setPixelColor(i, pixels.Color(0, 255, 255));
-			pixels.show();
-			delay(100);
-		}
-		break;
-
-	}
+switch (kindOf)
+{
+case 1:
+for (int i = 0; i < NUMPIXELS; i++) {
+pixels.setPixelColor(i, pixels.Color(255, 255, 255));
+pixels.setBrightness(50);
+pixels.show();
+//delay(500);
 }
+break;
+case 2:
+for (int i = 0; i < NUMPIXELS; i++) {
+pixels.setPixelColor(i, pixels.Color(0, 255, 255));
+pixels.show();
+delay(100);
+}
+break;
+
+}
+}*/
 
 //parametre olarak gelen de�eri debug topic e yazar
 void debugPublisher(String _data)
