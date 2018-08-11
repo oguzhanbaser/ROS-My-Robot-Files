@@ -1,0 +1,89 @@
+#!/usr/bin/env python
+
+import numpy as np
+import roslib
+import rospy
+import rosbag
+from std_msgs.msg import Int32, String, Float32, Header
+from geometry_msgs.msg import Twist
+from time import sleep
+import serial
+import sys
+
+class Arduino_Class:
+
+    def __init__(self):
+        
+        self._left_wheel_sub = rospy.Subscriber('/left_wheel_speed', Float32, self._updateLeftSpeed)
+        self._right_wheel_sub = rospy.Subscriber('/right_wheel_speed', Float32, self._updateRightSpeed)
+        self._sens_pub = rospy.Publisher('/sensor_data', String, queue_size=1)
+        self._imu_pub = rospy.Publisher('/raw_imu', String, queue_size=1)
+        self._portName = "/dev/ttyUSB0"
+        self._inData = " "
+
+    def _delay(self, pTime):
+        sleep(pTime / 1000.0)
+
+    def _parseImuData(self):
+        pass
+
+    def _parseEncData(self):
+        pass
+
+    def _parseSensData(self):
+        pass
+
+    def _updateLeftSpeed(self):
+        pass
+
+    def _updateRightSpeed(self):
+        pass
+
+    def spin(self):
+
+        while not rospy.is_shutdown():
+
+            if self._ser.inWaiting() > 0:
+                self._inData = self._ser.readline()
+                print self._inData
+
+            if self._inData[0] == '#':
+                # sens_pub.publish(tData)
+                self._parseSensData()
+            elif self._inData[0] == '$':
+                self._parseImuData()
+                # imu_pub.publish(tData)
+            elif self._inData[0] == 'e':
+                self._parseEncData()
+
+
+            rospy.spin()
+
+
+    def start(self):
+        rospy.logdebug("Starting Arduino Node")
+        self._ser = serial.Serial(port=self._portName, baudrate=115200)
+        self._ser.write("#imu|1|")
+        self._ser.write("#enc|1|")
+        pass
+
+    def stop(self):
+        self._ser.write("#imu|0|")
+        self._ser.write("#enc|0|")
+        self._ser.close()
+
+
+if __name__ == '__main__':
+    rospy.init_node('arduino_node')
+    arduino = Arduino_Class()
+
+    try:
+        arduino.start()
+        arduino.spin()
+    except rospy.ROSInterruptException:
+        rospy.logerr("Error in starting Arduino Node")
+
+    print "Exiting.."
+    arduino.stop()
+
+

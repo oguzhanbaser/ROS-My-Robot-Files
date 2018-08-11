@@ -1,0 +1,5 @@
+<launch>
+    <arg name="urdf_file" default="$(find my_robot_description)/urdf/myModel.urdf" />
+
+    <node pkg="my_robot_description" type="test_urdf" name="test_urdf" args="$(arg urdf_file)" output="screen"/>
+</launch>

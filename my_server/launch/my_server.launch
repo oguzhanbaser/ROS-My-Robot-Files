@@ -1,5 +1,0 @@
-<launch>
-    <node pkg="my_server" type="my_server" name="server" launch-prefix="xterm -e gdb --args" args="_image_transport:=compressed">
-
-    </node>
-</launch>

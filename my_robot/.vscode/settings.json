@@ -1,0 +1,11 @@
+{
+    "python.autoComplete.extraPaths": [
+        "/home/baser-ubuntu/ros_workspaces/robot_setup_ws/devel/lib/python2.7/dist-packages",
+        "/usr/local/lib/python2.7/dist-packages",
+        "/opt/ros/kinetic/lib/python2.7/dist-packages",
+        "/home/baser-ubuntu/Documents/caffe/python",
+        "/home/baser-ubuntu/Documents/caffe/distribute/python",
+        "/home/baser-ubuntu/Documents/opencv-3.4.0/build/lib",
+        "/home/baser-ubuntu/darknet/python"
+    ]
+}

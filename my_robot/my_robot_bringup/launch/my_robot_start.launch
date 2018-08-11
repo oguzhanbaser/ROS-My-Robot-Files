@@ -1,0 +1,79 @@
+<launch>
+
+    <!-- robot rviz connections -->
+    <param name="robot_description" command="cat $(find my_robot_description)/urdf/myModel.urdf" />
+    <node name="robot_state_publisher" pkg="robot_state_publisher" type="state_publisher">
+        <param name="publish_frequency" type="double" value="50.0" />
+    </node>
+
+    <node name="joint_publisher" pkg="joint_state_publisher" type="joint_state_publisher">
+        <param name="rate" type="double" value="50.0" />
+    </node>
+
+    <arg name="map_file" default="$(find my_robot_navigation)/maps/myHomeMap.yaml"/>
+    <node name="map_server" pkg="map_server" type="map_server" args="$(arg map_file)" />
+    <!-- <node pkg="tf" type="static_transform_publisher" name="map_brocaster" args="0 0 0 0 0 0 1 map base_link 2" /> -->
+
+    <node name="rplidarNode"          pkg="rplidar_ros"  type="rplidarNode" output="screen">
+        <param name="serial_port"         type="string" value="/dev/ttyUSB1"/>  
+        <param name="serial_baudrate"     type="int"    value="115200"/>
+        <param name="frame_id"            type="string" value="base_scan"/>
+        <param name="inverted"            type="bool"   value="false"/>
+        <param name="angle_compensate"    type="bool"   value="true"/>
+    </node>
+
+    <include file="$(find my_robot_navigation)/launch/amcl.launch"/>
+    <include file="$(find my_robot_navigation)/launch/move_base.launch"/>
+    <!-- <include file="$(find rplidar_ros)/launch/hectormapping.launch" /> -->
+    <!-- <include file="$(find my_robot_navigation)/launch/includes/move_base.launch.xml"/> -->
+
+
+    <!-- <node name="state_publisher" pkg="my_robot_description" type="my_robot_state"/> -->
+    
+    <!-- some robot configurations -->
+    <rosparam param="base_width">0.29</rosparam>
+    <rosparam param="ticks_meter">5096</rosparam>
+    <rosparam param="base_frame_id">base_footprint</rosparam>
+
+    <node name="arduino_node" pkg="my_robot_bringup" type="read_arduino.py">
+        <rosparam file="$(find my_robot_bringup)/param/board_config.yaml" command="load" />
+    </node>
+
+    <node name="lpid_velocity" pkg="my_robot_bringup" type="pid_velocity.py" output="screen">
+      <remap from="wheel" to="lwheel"/>
+      <remap from="motor_cmd" to="left_wheel_speed"/>
+      <remap from="wheel_vtarget" to="lwheel_vtarget"/>
+      <remap from="wheel_vel" to="lwheel_vel"/>
+    
+      <rosparam param="Kp">400</rosparam>
+      <rosparam param="Ki">200</rosparam>
+      <rosparam param="Kd">0</rosparam>
+      <rosparam param="out_min">-255</rosparam>
+      <rosparam param="out_max">255</rosparam>
+      <rosparam param="rate">30</rosparam>
+      <rosparam param="timeout_ticks">4</rosparam>
+      <rosparam param="rolling_pts">5</rosparam>
+
+  </node>
+
+
+  <node name="rpid_velocity" pkg="my_robot_bringup" type="pid_velocity.py" output="screen">
+      <remap from="wheel" to="rwheel"/>
+      <remap from="motor_cmd" to="right_wheel_speed"/>
+      <remap from="wheel_vtarget" to="rwheel_vtarget"/>
+      <remap from="wheel_vel" to="rwheel_vel"/>
+      <rosparam param="Kp">400</rosparam>
+      <rosparam param="Ki">200</rosparam>
+      <rosparam param="Kd">0</rosparam>
+      <rosparam param="out_min">-255</rosparam>
+      <rosparam param="out_max">255</rosparam>
+      <rosparam param="rate">30</rosparam>
+      <rosparam param="timeout_ticks">4</rosparam>
+      <rosparam param="rolling_pts">5</rosparam>
+  </node>
+
+  <node pkg="my_robot_bringup" type="twist_to_motors.py" name="twist_to_motors" output="screen"/>
+  <node pkg="my_robot_bringup" type="diff_tf.py" name="diff_tf" output="screen"/> 
+
+
+</launch>

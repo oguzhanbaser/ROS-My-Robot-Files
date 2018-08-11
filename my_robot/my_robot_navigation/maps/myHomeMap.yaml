@@ -1,0 +1,7 @@
+image: /home/ubuntu/robot_setup_ws/src/my_robot/my_robot_navigation/maps/myHomeMap.pgm
+resolution: 0.050000
+origin: [-25.624998, -25.624998, 0.000000]
+negate: 0
+free_thresh: 0.196
+occupied_thresh: 0.65
+

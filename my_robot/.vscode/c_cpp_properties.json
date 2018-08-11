@@ -1,0 +1,29 @@
+{
+    "configurations": [
+        {
+            "browse": {
+                "databaseFilename": "",
+                "limitSymbolsToIncludedHeaders": true,
+                "path": [
+                    "/home/baser-ubuntu/ros_workspaces/robot_setup_ws/devel/include",
+                    "/opt/ros/kinetic/include",
+                    "/home/baser-ubuntu/ros_workspaces/robot_setup_ws/src/my_robot/my_robot_base/include",
+                    "/home/baser-ubuntu/ros_workspaces/robot_setup_ws/src/my_robot/my_robot_description/include",
+                    "/home/baser-ubuntu/ros_workspaces/robot_setup_ws/src/rosserial/rosserial_server/include",
+                    "/usr/include"
+                ]
+            },
+            "includePath": [
+                "/home/baser-ubuntu/ros_workspaces/robot_setup_ws/devel/include",
+                "/opt/ros/kinetic/include",
+                "/home/baser-ubuntu/ros_workspaces/robot_setup_ws/src/my_robot/my_robot_base/include",
+                "/home/baser-ubuntu/ros_workspaces/robot_setup_ws/src/my_robot/my_robot_description/include",
+                "/home/baser-ubuntu/ros_workspaces/robot_setup_ws/src/rosserial/rosserial_server/include",
+                "/usr/include"
+            ],
+            "name": "Linux",
+            "intelliSenseMode": "clang-x64"
+        }
+    ],
+    "version": 4
+}
